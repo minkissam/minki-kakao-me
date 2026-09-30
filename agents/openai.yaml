@@ -1,0 +1,4 @@
+interface:
+  display_name: "Minki Kakao Me"
+  short_description: "카카오 공식 API로 내 카카오톡에 작업 결과와 알림 보내기"
+  default_prompt: "$minki-kakao-me 내 카카오톡 연결 상태를 확인하고, 요청한 내용을 나에게 보내줘."
