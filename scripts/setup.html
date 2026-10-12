@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>카카오톡 나에게 보내기 연결</title>
+<style>
+:root{font-family:"Malgun Gothic",system-ui,sans-serif;color:#222;background:#f6f6f3;line-height:1.65}
+*{box-sizing:border-box}body{margin:0}main{max-width:820px;margin:auto;padding:30px 22px 60px}
+h1{font-size:27px;line-height:1.35;margin:0 0 24px}h2{font-size:19px;margin:0 0 14px}
+section{background:white;border:1px solid #deded7;border-radius:12px;padding:24px;margin:18px 0}
+label{display:block;margin:14px 0 5px;font-weight:600}input,textarea,select{width:100%;border:1px solid #b8b8b0;border-radius:6px;padding:11px;font:inherit;background:#fff}
+input[type=checkbox]{width:auto;margin-right:8px}label.choice{font-size:14px;font-weight:400}
+textarea{resize:vertical;min-height:90px}button,a.button{display:inline-block;border:1px solid #b9b9b2;border-radius:6px;background:#fff;color:#222;padding:9px 15px;font:inherit;cursor:pointer;text-decoration:none}
+button.primary{background:#fee500;border-color:#e7ce00;font-weight:600}button:disabled{opacity:.45;cursor:default}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #3260a8;outline-offset:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.state{font-size:14px;color:#555;margin:0 0 12px}
+ol{padding-left:22px}li{margin:7px 0}code{overflow-wrap:anywhere;font-size:14px}details{margin:16px 0}summary{cursor:pointer;font-weight:600}
+#message{white-space:pre-wrap;margin:16px 0;padding:14px;border-left:4px solid #3260a8;background:#eef3f9}#message.error{border-color:#a12b20;background:#fff0ed}#message:empty{display:none}
+.hint{font-size:14px;color:#555;margin:7px 0}.footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:24px}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:18px}.message-preview{border:1px solid #ddd;border-radius:8px;background:#fff;padding:18px;overflow-wrap:anywhere;white-space:pre-wrap}.message-preview strong{display:block}.photo-preview{padding:25px 12px;margin-bottom:12px;background:#e9eee8;text-align:center;color:#476446;white-space:normal}.preview-buttons{display:flex;gap:8px;margin-top:15px}.preview-buttons a{flex:1;padding:8px;text-align:center;border:1px solid #ccc;border-radius:5px;color:#222;text-decoration:none;white-space:normal}.button-editor{border-left:3px solid #ddd;padding-left:14px;margin:18px 0}[hidden]{display:none!important}
+@media(max-width:500px){main{padding:20px 14px 40px}section{padding:18px}h1{font-size:23px}.row button{flex:1}}
+@media(max-width:650px){.split{grid-template-columns:1fr}}
+</style>
+</head>
+<body><main>
+<h1>카카오톡 나에게 보내기 연결</h1>
+<div id="message" role="status" aria-live="polite" tabindex="-1"></div>
+<section aria-labelledby="app-heading">
+<h2 id="app-heading">1. 내 카카오 앱</h2>
+<p class="state" id="app-state">연결 상태를 불러오는 중</p>
+<a class="button" href="https://developers.kakao.com/console/app" target="_blank" rel="noopener noreferrer">카카오 앱 관리 열기</a>
+<ol>
+<li>본인 앱을 만들거나 기존 개인 알림 앱을 선택합니다.</li>
+<li><strong>카카오 로그인</strong> 사용 설정을 ON으로 저장합니다.</li>
+<li><strong>카카오 로그인 → 동의항목</strong>에서 카카오톡 메시지 전송 <code>talk_message</code>을 선택 동의 또는 이용 중 동의로 설정합니다.</li>
+<li><strong>앱 → 플랫폼 키 → REST API 키</strong>에 아래 콜백 주소를 등록하고 REST API 키와 클라이언트 시크릿을 복사합니다.</li>
+</ol>
+<label for="callback">앱에 등록할 콜백 주소</label>
+<input id="callback" readonly>
+<div class="row"><button id="copy-callback" type="button">콜백 주소 복사</button></div>
+<form id="app-form">
+<label for="client-id">REST API 키</label><input id="client-id" type="password" autocomplete="off" spellcheck="false">
+<label for="client-secret">클라이언트 시크릿</label><input id="client-secret" type="password" autocomplete="off" spellcheck="false">
+<p class="hint" id="key-hint">새 REST API 키는 시크릿이 기본 활성화되어 있습니다.</p>
+<label class="choice"><input id="secret-disabled" type="checkbox">카카오 앱에서 시크릿을 직접 비활성화했음</label>
+<details><summary>기존 연결을 다른 앱으로 교체</summary><label class="choice"><input id="replace-app" type="checkbox">다른 앱으로 교체하고 로그인과 템플릿을 다시 연결</label></details>
+<div class="row"><button class="primary" type="submit">앱 설정 저장</button></div>
+</form>
+</section>
+<section aria-labelledby="login-heading">
+<h2 id="login-heading">2. 카카오 계정 연결</h2>
+<p class="state" id="login-state"></p>
+<div class="row"><button id="login" class="primary" type="button">카카오 로그인</button><button id="check" type="button">전송 동의 확인</button></div>
+</section>
+<section aria-labelledby="template-heading">
+<h2 id="template-heading">3. 카카오 템플릿 연결</h2>
+<p class="state" id="template-state"></p>
+<a class="button" href="https://developers.kakao.com/tool/template-builder/app" target="_blank" rel="noopener noreferrer">메시지 템플릿 도구 열기</a>
+<form id="template-form">
+<details><summary>기본 알림 연결</summary>
+<ol>
+<li>연결한 앱에서 사용자 정의 <strong>피드 A형</strong> 템플릿을 만듭니다.</li>
+<li>사용 목적은 <strong>카카오톡 공유</strong>, 전달 허용은 불가로 설정합니다.</li>
+<li>제목과 본문을 켜고 제목에 <code>${TITLE}</code>, 본문에 <code>${TEXT}</code>를 입력합니다.</li>
+<li>이미지, 버튼, 헤더, 프로필, 소셜과 아이템은 끕니다. 공통 링크와 제목/본문 링크도 사용 안 함으로 설정합니다.</li>
+<li>저장한 템플릿의 ID를 아래에 입력합니다.</li>
+</ol>
+<label for="text-template">텍스트 템플릿 ID</label><input id="text-template" inputmode="numeric" pattern="[1-9][0-9]*">
+</details>
+<details><summary>사진 알림 연결</summary>
+<p>사진용은 텍스트 템플릿을 복제해 이미지 1장을 켜고 <code>${IMAGE}</code> 인자를 설정합니다. 버튼과 링크는 끈 상태로 저장합니다.</p>
+<label for="image-template">이미지 템플릿 ID</label><input id="image-template" inputmode="numeric" pattern="[1-9][0-9]*">
+</details>
+<details><summary>링크 도메인 등록</summary>
+<label for="origins">등록한 웹 도메인 (한 줄에 하나)</label><textarea id="origins" placeholder="https://docs.google.com" spellcheck="false"></textarea>
+<p class="hint">링크 버튼의 목적지 도메인을 앱의 제품 링크 관리에 등록한 뒤 입력합니다.</p>
+</details>
+<div class="row"><button class="primary" type="submit">템플릿 설정 저장</button></div>
+</form>
+</section>
+<section aria-labelledby="send-heading">
+<h2 id="send-heading">4. 템플릿 선택과 전송</h2>
+<p class="state" id="send-state"></p>
+<label for="template-choice">전송할 템플릿</label><select id="template-choice"></select>
+<div class="split"><form id="send-form">
+<label for="title">제목</label><input id="title" maxlength="100">
+<label for="text">메시지</label><textarea id="text" maxlength="200">카카오톡 연결이 완료되었습니다.</textarea>
+<label for="image-url">사진 URL</label><input id="image-url" type="url" placeholder="https://" spellcheck="false">
+<label for="button-count">링크 버튼</label><select id="button-count"><option value="0">없음</option><option value="1">1개</option><option value="2">2개</option></select>
+<div id="button-1" class="button-editor" hidden>
+<label for="button-title-1">버튼 1 문구</label><input id="button-title-1" maxlength="10">
+<label for="button-url-1">버튼 1 링크</label><input id="button-url-1" type="url" placeholder="https://" spellcheck="false">
+<details><summary>모바일 전용 링크</summary><label for="button-mobile-1">버튼 1 모바일 링크</label><input id="button-mobile-1" type="url" spellcheck="false"></details>
+</div>
+<div id="button-2" class="button-editor" hidden>
+<label for="button-title-2">버튼 2 문구</label><input id="button-title-2" maxlength="10">
+<label for="button-url-2">버튼 2 링크</label><input id="button-url-2" type="url" placeholder="https://" spellcheck="false">
+<details><summary>모바일 전용 링크</summary><label for="button-mobile-2">버튼 2 모바일 링크</label><input id="button-mobile-2" type="url" spellcheck="false"></details>
+</div>
+<details><summary>개별 카카오 템플릿 ID</summary><label for="custom-template">선택한 구성의 카카오 템플릿 ID</label><input id="custom-template" inputmode="numeric" pattern="[1-9][0-9]*"><p class="hint">AI가 이 구성에 맞춰 만든 카카오 템플릿을 연결합니다.</p></details>
+<div class="row"><button id="preview" type="button">전송 구성 확인</button><button id="send" class="primary" type="submit">나에게 보내기</button></div>
+</form><div><h3>미리보기</h3><div class="message-preview" aria-label="메시지 미리보기"><div id="preview-photo" class="photo-preview" hidden>사진</div><strong id="preview-title"></strong><div id="preview-text"></div><div id="preview-buttons" class="preview-buttons"></div></div><p class="hint" id="preview-state"></p></div></div>
+<details id="save-details"><summary>이 구성을 내 템플릿으로 저장</summary>
+<label for="template-name">템플릿 이름</label><input id="template-name" maxlength="40" placeholder="예: 주간 보고서">
+<div class="row"><button id="save-template" type="button">이름으로 저장</button><button id="delete-template" type="button">선택한 저장 템플릿 삭제</button></div>
+</details>
+</section>
+<div class="footer"><button id="refresh" type="button">연결 상태 새로고침</button><button id="close" type="button">설정 종료</button></div>
+</main>
+<script nonce="__SESSION__">
+const token='__SESSION__';
+const el=id=>document.getElementById(id);
+let state={},busy=false,closed=false;
+function tell(message,error=false){el('message').textContent=message;el('message').classList.toggle('error',error);if(error){el('message').focus();}}
+function buttons(){document.querySelectorAll('button').forEach(b=>b.disabled=busy||closed);el('login').disabled=busy||closed||!state.configured||state.callback_changed;el('check').disabled=busy||closed||!state.authenticated;el('send').disabled=busy||closed||!state.authenticated||state.delivery_unknown;el('delete-template').disabled=busy||closed||!selectedTemplate()||selectedTemplate().builtin;}
+async function api(path,data){const response=await fetch(path,{method:data===undefined?'GET':'POST',headers:{'X-Setup-Token':token,'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)});const result=await response.json();if(!response.ok){throw new Error([...new Set([result.message,result.action].filter(Boolean))].join('\n'));}return result;}
+function render(hydrate=false){
+el('callback').value=state.redirect_uri||'';
+el('app-state').textContent=state.callback_changed?'콜백 주소가 바뀌었습니다. 위 앱에 아래 주소를 등록한 뒤 앱 설정을 저장하세요.':state.configured?'앱 설정 저장됨':'앱 키를 저장하세요.';
+if(state.configured){el('key-hint').textContent='키 입력란을 비워 두면 저장한 값을 유지합니다. 시크릿을 변경할 때만 새 값을 입력하세요.';}
+el('login-state').textContent=state.authenticated?'카카오 계정 연결됨':state.refresh_token_expired?'계정 연결이 만료되었습니다. 다시 로그인하세요.':'카카오 계정을 연결하세요.';
+const settings=state.messaging||{};
+el('template-state').textContent=[settings.buttonless_text_template_id?'기본 알림 연결됨':'기본 알림 연결 필요',settings.buttonless_image_template_id?'사진 알림 연결됨':''].filter(Boolean).join(' / ');
+el('send-state').textContent=state.delivery_unknown?'앞선 발송의 전달 여부를 나와의 채팅에서 확인하세요.':state.authenticated?'템플릿을 선택하고 보낼 내용을 입력하세요.':'카카오 계정을 연결하면 전송할 수 있습니다.';
+if(hydrate){el('text-template').value=settings.buttonless_text_template_id||'';el('image-template').value=settings.buttonless_image_template_id||'';el('origins').value=(settings.registered_web_origins||[]).join('\n');}
+const chosen=el('template-choice').value;el('template-choice').replaceChildren();for(const item of state.templates||[]){const option=document.createElement('option');option.value=item.name;option.textContent=item.name;el('template-choice').append(option);}if((state.templates||[]).some(t=>t.name===chosen))el('template-choice').value=chosen;
+preview();
+buttons();
+}
+function selectedTemplate(){return(state.templates||[]).find(t=>t.name===el('template-choice').value);}
+function message(){const count=Number(el('button-count').value),buttons=[];for(let i=1;i<=count;i++){const button={title:el('button-title-'+i).value.trim(),url:el('button-url-'+i).value.trim()};const mobile=el('button-mobile-'+i).value.trim();if(mobile)button.mobile_url=mobile;buttons.push(button);}const spec={text:el('text').value,title:el('title').value,image_url:el('image-url').value.trim()||null,buttons};if(el('custom-template').value.trim())spec.template_id=el('custom-template').value.trim();const selected=selectedTemplate();if(selected&&selected.builtin)spec.template=selected.name;return spec;}
+function preview(){const spec=message();el('preview-title').textContent=spec.title;el('preview-text').textContent=spec.text;el('preview-photo').hidden=!spec.image_url;el('preview-photo').textContent=spec.image_url?'사진: '+spec.image_url:'';el('preview-buttons').replaceChildren();for(const button of spec.buttons){const link=document.createElement('a');link.textContent=button.title||'버튼 문구';try{const url=new URL(button.url);if(['http:','https:'].includes(url.protocol)){link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';}}catch{}el('preview-buttons').append(link);}for(let i=1;i<=2;i++)el('button-'+i).hidden=i>spec.buttons.length;el('preview-state').textContent='';}
+function chooseTemplate(){const item=selectedTemplate();if(!item)return;const spec=item.message;el('title').value=spec.title||'';if(!item.builtin)el('text').value=spec.text||'';el('image-url').value=spec.image_url||'';el('image-url').placeholder=item.name.startsWith('사진')?'사진의 https:// 주소를 입력하세요':'https://';el('button-count').value=(spec.buttons||spec.actions||[]).length||spec.button_count||0;el('custom-template').value=spec.template_id||'';el('template-name').value=item.builtin?'':item.name;for(let i=1;i<=2;i++){const button=(spec.buttons||spec.actions||[])[i-1]||{};el('button-title-'+i).value=button.title||(i===1?'자료 열기':'관련 문서');el('button-url-'+i).value=button.url||'';el('button-mobile-'+i).value=button.mobile_url||'';}preview();buttons();}
+async function refresh(hydrate=false){state=await api('/api/status');render(hydrate);}
+async function work(fn){if(busy||closed)return;busy=true;buttons();try{await fn();}catch(error){tell(error.message||'설정 서버에 연결하지 못했습니다. 터미널에서 setup을 다시 실행하세요.',true);}finally{busy=false;buttons();}}
+el('app-form').addEventListener('submit',event=>{event.preventDefault();work(async()=>{await api('/api/config',{client_id:el('client-id').value.trim(),client_secret:el('client-secret').value.trim(),secret_disabled:el('secret-disabled').checked,replace_app:el('replace-app').checked});el('client-id').value='';el('client-secret').value='';el('replace-app').checked=false;await refresh(true);tell('');});});
+el('login').addEventListener('click',()=>work(async()=>{const result=await api('/api/login',{});location.assign(result.authorization_url);}));
+el('check').addEventListener('click',()=>work(async()=>{const result=await api('/api/check',{});const names={windows:'Windows',python:'Python',app:'앱 설정',login:'계정 연결',talk_message:'메시지 전송 동의',server_login:'서버 인증'};tell(result.checks.map(c=>(c.ok?'확인됨: ':'확인 필요: ')+(names[c.name]||c.name)+(c.ok?'':'\n'+(c.action||c.message))).join('\n'),!result.ok);await refresh();}));
+el('template-form').addEventListener('submit',event=>{event.preventDefault();work(async()=>{const settings={registered_web_origins:el('origins').value.split(/\r?\n/).map(v=>v.trim()).filter(Boolean)};if(el('text-template').value.trim())settings.buttonless_text_template_id=el('text-template').value.trim();if(el('image-template').value.trim())settings.buttonless_image_template_id=el('image-template').value.trim();await api('/api/messaging',settings);await refresh(true);tell('');});});
+el('send-form').addEventListener('input',preview);
+el('template-choice').addEventListener('change',chooseTemplate);
+el('preview').addEventListener('click',()=>work(async()=>{const result=await api('/api/preview',{message:message()});el('preview-state').textContent='전송 구성 확인됨: 버튼 '+result.preview.button_count+'개';tell('');}));
+el('save-template').addEventListener('click',()=>work(async()=>{const name=el('template-name').value.trim();await api('/api/template',{name,message:message()});await refresh();el('template-choice').value=name;chooseTemplate();el('save-details').open=false;tell('');}));
+el('delete-template').addEventListener('click',()=>work(async()=>{await api('/api/template',{name:el('template-choice').value,delete:true});await refresh();chooseTemplate();tell('');}));
+el('send-form').addEventListener('submit',event=>{event.preventDefault();work(async()=>{try{const result=await api('/api/send',{message:message()});tell(result.duplicate_skipped?'같은 메시지의 발송 기록을 확인했습니다.':'카카오 API 발송 성공. 나와의 채팅에서 메시지를 확인하세요.');}finally{await refresh();}});});
+el('refresh').addEventListener('click',()=>work(()=>refresh(true)));
+el('copy-callback').addEventListener('click',()=>work(async()=>{try{await navigator.clipboard.writeText(el('callback').value);}catch{el('callback').focus();el('callback').select();tell('선택된 콜백 주소를 Ctrl+C로 복사하세요.');}}));
+el('close').addEventListener('click',()=>work(async()=>{await api('/api/close',{});closed=true;tell('설정을 종료했습니다. 이 창을 닫아도 됩니다.');}));
+work(async()=>{await refresh(true);chooseTemplate();if(state.notice){tell([state.notice.message,state.notice.action].filter(Boolean).join('\n'),!state.notice.ok);}});
+</script>
+</body></html>

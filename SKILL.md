@@ -1,11 +1,23 @@
 ---
 name: minki-kakao-me
-description: Send user-authorized KakaoTalk self notifications with context-appropriate text, images, and zero to two useful link buttons. Use for 카카오톡 나에게 보내기, 카톡으로 결과 보내기, and setting up or checking this personal notification connection.
+description: Connect the user's personal Kakao app using browser or computer-use tools, recover missing browser integrations, and send authorized KakaoTalk self notifications. Use for 카카오톡 나에게 보내기, 카톡으로 결과 보내기, 최초 앱 연결 and connection troubleshooting on Windows in Codex or Claude Code.
 ---
 
 # Minki Kakao Me
 
 Windows용 개인 알림 스킬. Python 3.10 이상·표준 라이브러리로 카카오 공식 API를 호출한다. 수신자는 연결된 계정의 **나와의 채팅**이다.
+
+## 최초 연결과 복구
+
+연결 요청은 [AI 에이전트의 최초 연결 절차](references/agent-setup.md)를 먼저 읽고 진행한다. 현재 도구와 기존 로그인 세션을 확인하고, 오른쪽 브라우저 또는 연결한 Chrome/computer use로 앱 생성, 로그인 설정, 동의항목, 템플릿 등록과 로컬 설정을 직접 수행한다.
+
+브라우저 조작이 제한되면 확장 프로그램이나 플러그인의 공식 설치/연결 화면을 준비하고 필요한 설치, 로그인과 사이트 권한 허용을 사용자에게 구체적으로 요청한다. 연결이 확인되면 중단 단계부터 재개한다. 사용자에게 전체 설정 과정을 수동으로 맡기는 것을 기본 경로로 삼지 않는다.
+
+`setup.ps1 -NoBrowser`는 사용할 Python을 찾아 AI가 열 `setup_url`을 출력한다. 설정 서버는 OAuth 콜백과 저장을 마칠 때까지 실행 상태를 유지한다. `doctor`의 `next_step`부터 진행하며 `doctor --online`으로 서버의 전송 동의를 확인할 수 있다. 같은 앱의 설정 갱신은 기존 연결을 유지한다.
+
+콜백은 매 실행에 출력된 `redirect_uri`와 화면 주소를 그대로 등록한다. 사용 중인 포트는 자동으로 피하며, 주소가 바뀌면 현재 앱의 등록 주소와 로컬 설정을 갱신한 뒤 로그인한다. 세션 화면 주소 `setup_url`과 OAuth 콜백 주소를 구분한다.
+
+여러 구성을 요청하면 `templates` 목록을 읽고 원하는 이름을 선택한다. 로컬 화면에서 사진과 버튼별 링크를 입력하고 미리보기를 확인할 수 있다. 자주 쓰는 구성은 이름으로 저장한다. 발송은 메시지 JSON의 `template` 또는 `send --template '<이름>'`을 사용하고, 이번 본문과 실제 링크를 반영한다. 개별 카카오 카드 ID와 버튼 링크의 표준 인자는 [메시지 명세](references/templates.md)를 따른다.
 
 ## 구성을 고르는 기준
 
@@ -27,7 +39,7 @@ Windows용 개인 알림 스킬. Python 3.10 이상·표준 라이브러리로 �
 
 ## 실행
 
-1. 이 스킬의 실제 절대경로로 `py -3 -B -X utf8 <skill>/scripts/kakao_me.py status`를 실행한다. 설정·인증이 없으면 [최초 연결](references/setup.md)을 따른다. `status`는 로컬 상태이며 서버의 토큰 유효성 확인과 구분한다.
+1. 확인한 Python과 이 스킬의 실제 절대경로로 `py -3 -B -X utf8 <skill>/scripts/kakao_me.py doctor`를 실행한다. 설정·인증·템플릿이 부족하면 [AI 최초 연결](references/agent-setup.md)을 따라 해당 단계부터 진행한다. 명령과 오류는 [연결 명령](references/setup.md)을 참고한다.
 2. 복합 구성·버튼 없는 메시지의 등록·오류 처리는 [메시지 명세와 템플릿](references/templates.md)을 읽는다. 현재 등록한 도메인과 버튼 없는 템플릿 ID는 `messaging` 명령으로 조회한다.
 3. 선택한 내용을 UTF-8 JSON 파일로 저장한다. 자연어 판단은 Codex가 하고, 스크립트는 명시 선택과 구조·도메인·개수를 검증한다. `buttons: []`는 항상 버튼 없음이다. 미지정 버튼은 전달한 유용한 `actions`에서만 고르며 기본 URL을 자동 삽입하지 않는다.
 4. `send --message-file <절대경로> --request-id <논리적-전송-ID> --dry-run`으로 본문·사진·버튼 수·문구·PC/모바일 목적지를 확인한다. 명령줄에 본문이나 JSON을 보간하지 않는다. dry-run은 네트워크·토큰 갱신·전송 기록 없이 실행된다.
@@ -46,6 +58,6 @@ py -3 -B -X utf8 <skill>/scripts/kakao_me.py send --message-file <message.json> 
 
 - `talk_message`만 사용하며 친구·단체방·연락처·채팅 DB에는 접근하지 않는다. 이메일·OIDC 권한은 요청하지 않는다.
 - 키·토큰은 `%LOCALAPPDATA%\Codex\kakao-me\profile.dpapi`에 현재 Windows 사용자용 DPAPI로 저장한다. 이 파일이나 복호화한 값을 채팅·공유 소스에 넣지 않는다.
-- 토큰은 자동 갱신한다. 리프레시 토큰 만료나 동의 철회 시 재로그인이 필요하다. `messaging --from-file`은 인증정보와 기존 전송 기록을 유지하며 템플릿·도메인 정보만 갱신한다. 키를 교체하는 `configure`와 구분한다.
+- 토큰은 자동 갱신한다. 리프레시 토큰 만료나 동의 철회 시 재로그인이 필요하다. `messaging --from-file`은 템플릿과 도메인 정보만 갱신한다. `configure`도 같은 앱이면 토큰과 기존 설정을 유지한다. 앱 키 교체 시 기존 암호화 프로필을 백업하고 새 앱을 연결한다.
 - 두 발송 경로 모두 `401/-401`에서만 갱신 후 1회 재시도한다. 타임아웃·서버 오류·응답 불명은 전송됐을 수 있어 `delivery_unknown`으로 멈춘다. 실제 수신 확인 없이 새 ID로 우회 재시도하지 않는다. 최근 100건의 request ID를 기록한다.
 - 스킬 설치가 모든 작업의 자동 발송 동의를 뜻하지 않는다. 해당 작업에서 사용자가 요청한 전송 범위를 따른다.
