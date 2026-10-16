@@ -19,3 +19,5 @@ jobs:
           python-version: '3.12'
       - name: Run offline tests
         run: python -B -X utf8 -m unittest discover -s tests -v
+      - name: Check browser snapshot redaction with synthetic credentials
+        run: node --test tests/test_browser_redaction.mjs
